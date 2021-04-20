@@ -1,0 +1,7 @@
+/ts_build
+/target
+/pkg
+/assets/glTF-Samples
+/ts/gltf
+
+Cargo.lock

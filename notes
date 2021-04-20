@@ -1,0 +1,21 @@
+# about
+Come here to get some easy copy pasta
+
+# build
+tsc -w
+cargo fmt && wasm-pack build --target web --release
+
+# dev
+cargo fmt
+cargo fmt && cargo check
+cargo check
+cargo fmt && cargo clippy
+cargo clippy
+
+# dev deploy
+python3 -m http.server 8000
+
+# Optimization
+prefer &'static str to String
+avoid unwrap
+avoid format! and macros in general
