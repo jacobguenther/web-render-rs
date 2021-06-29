@@ -5,7 +5,10 @@
 //
 // Description:
 
-use web_sys::{WebGl2RenderingContext, WebGlShader};
+use web_sys::{
+	WebGl2RenderingContext,
+	WebGlShader,
+};
 
 #[derive(Clone, Debug)]
 pub struct Shader {

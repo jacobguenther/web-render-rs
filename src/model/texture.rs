@@ -8,7 +8,11 @@
 use std::rc::Rc;
 
 use serde::Deserialize;
-use web_sys::{HtmlImageElement, WebGl2RenderingContext, WebGlTexture};
+use web_sys::{
+	HtmlImageElement,
+	WebGl2RenderingContext,
+	WebGlTexture,
+};
 
 #[derive(Copy, Clone, Debug, Deserialize)]
 pub struct Sampler {
@@ -52,7 +56,8 @@ impl Texture {
 		let (mip_level, use_mipmap, min_filter, fmt) = {
 			let width = image_element.width();
 			let height = image_element.height();
-			let is_power_of_2 = Self::is_power_of_2(width) && Self::is_power_of_2(height);
+			let is_power_of_2 =
+				Self::is_power_of_2(width) && Self::is_power_of_2(height);
 
 			// let min_filter = sampler.min_filter as u32;
 			// let has_mipmap_min_filter = min_filter == WebGl2RenderingContext::LINEAR_MIPMAP_LINEAR

@@ -88,7 +88,7 @@ pub struct BufferViewIntermediate {
 #[derive(Clone, Debug, Deserialize)]
 pub struct MaterialIntermediate {
 	pub id: String,
-	pub diffuse: u32,
+	pub diffuse: Option<u32>,
 	pub normal: Option<u32>,
 	pub metallic_roughness: Option<u32>,
 	pub occlusion: Option<u32>,

@@ -15,7 +15,9 @@ pub enum Warning {
 impl std::fmt::Display for Warning {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
-			Warning::ShaderWarning(shader_warning) => write!(f, "{}", shader_warning),
+			Warning::ShaderWarning(shader_warning) => {
+				write!(f, "{}", shader_warning)
+			}
 			Warning::Custom(warning) => write!(f, "{}", warning),
 		}
 	}

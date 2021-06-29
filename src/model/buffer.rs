@@ -5,7 +5,10 @@
 //
 // Description:
 
-use web_sys::{WebGl2RenderingContext, WebGlBuffer};
+use web_sys::{
+	WebGl2RenderingContext,
+	WebGlBuffer,
+};
 
 #[derive(Clone, Debug)]
 pub struct Buffer {

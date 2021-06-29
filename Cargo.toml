@@ -17,7 +17,11 @@ opt-level = "z" # 1 2 3 "s" "z"
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz"] # -O1 -O2 -O3 -O4 -Os -Oz
 
-
+[dependencies]
+macros = { version = "0.1", path = "macros" }
+futures = "0.3"
+console_error_panic_hook = "0.1.6"
+rctree = "0.3.3"
 
 [dependencies.js-sys]
 version = "0.3.48"
@@ -57,7 +61,12 @@ features = [
 	'HtmlCollection',
 	'Element',
 	'HtmlCanvasElement',
+	'CanvasRenderingContext2d',
+	'ImageData',
 	'HtmlImageElement',
+
+	'MouseEvent',
+	'KeyboardEvent',
 
 	'WebGl2RenderingContext',
 	'WebGlBuffer',

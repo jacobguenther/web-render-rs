@@ -5,16 +5,27 @@
 //
 // Description:
 
-use std::{convert::TryFrom, rc::Rc};
+pub mod generator;
 
-use web_sys::{WebGl2RenderingContext, WebGlVertexArrayObject};
+use std::{
+	convert::TryFrom,
+	rc::Rc,
+};
+
+use web_sys::{
+	WebGl2RenderingContext,
+	WebGlVertexArrayObject,
+};
 
 use super::buffer::Buffer;
 use super::buffer_view::BufferView;
 use super::material::Material;
 use super::Drawable;
 use crate::program::attribute_locations;
-use crate::{config::BufferViewIntermediate, program::Program};
+use crate::{
+	config::BufferViewIntermediate,
+	program::Program,
+};
 
 #[derive(Copy, Clone, Debug)]
 pub struct AttributeBufferViews {
@@ -56,7 +67,8 @@ impl TryFrom<&[BufferViewIntermediate]> for AttributeBufferViews {
 			}
 		}
 
-		let position = position.ok_or("Attribute views must contain a position view")?;
+		let position =
+			position.ok_or("Attribute views must contain a position view")?;
 		Ok(AttributeBufferViews {
 			position,
 			normal,
@@ -78,6 +90,7 @@ pub struct Mesh {
 	pub buffers: Vec<Rc<Buffer>>,
 	pub index_view: Option<BufferView>,
 	pub attribute_buffer_views: AttributeBufferViews,
+	pub mode: u32,
 }
 impl Mesh {
 	pub fn new(
@@ -86,6 +99,7 @@ impl Mesh {
 		buffers: &[Rc<Buffer>],
 		index_view: &Option<BufferView>,
 		attribute_buffer_views: &AttributeBufferViews,
+		mode: u32,
 	) -> Result<Self, &'static str> {
 		let vao = Self::_create_vao(gl, attribute_buffer_views, buffers)?;
 		Ok(Self {
@@ -94,7 +108,14 @@ impl Mesh {
 			buffers: buffers.to_owned(),
 			index_view: *index_view,
 			attribute_buffer_views: *attribute_buffer_views,
+			mode,
 		})
+	}
+	pub fn clean_up(&mut self, gl: &WebGl2RenderingContext) {
+		gl.delete_vertex_array(Some(&self.vao));
+		for buffer in self.buffers.iter() {
+			gl.delete_buffer(Some(&buffer.handle));
+		}
 	}
 	fn _create_vao(
 		gl: &WebGl2RenderingContext,
@@ -194,14 +215,14 @@ impl Drawable for Mesh {
 		if let Some(ref index_view) = self.index_view {
 			self.buffers[index_view.buffer].bind(gl);
 			gl.draw_elements_with_i32(
-				WebGl2RenderingContext::TRIANGLES,
+				self.mode,
 				index_view.component_count,
 				index_view.component_type,
 				0, // index_view.combined_offset,
 			);
 		} else {
 			gl.draw_arrays(
-				WebGl2RenderingContext::TRIANGLES,
+				self.mode,
 				self.attribute_buffer_views.position.buffer_offset,
 				self.attribute_buffer_views.position.component_count,
 			);

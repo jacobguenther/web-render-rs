@@ -7,7 +7,12 @@
 
 use std::collections::HashMap;
 
-use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader, WebGlUniformLocation};
+use web_sys::{
+	WebGl2RenderingContext,
+	WebGlProgram,
+	WebGlShader,
+	WebGlUniformLocation,
+};
 
 use crate::shader::Shader;
 use crate::warning::*;
@@ -74,13 +79,19 @@ impl Program {
 		gl.link_program(&program);
 
 		if gl
-			.get_program_parameter(&program, WebGl2RenderingContext::LINK_STATUS)
+			.get_program_parameter(
+				&program,
+				WebGl2RenderingContext::LINK_STATUS,
+			)
 			.as_bool()
 			.unwrap_or(false)
 		{
 			gl.validate_program(&program);
 			if gl
-				.get_program_parameter(&program, WebGl2RenderingContext::VALIDATE_STATUS)
+				.get_program_parameter(
+					&program,
+					WebGl2RenderingContext::VALIDATE_STATUS,
+				)
 				.as_bool()
 				.unwrap_or(false)
 			{
@@ -101,12 +112,14 @@ impl Program {
 		let program_log = gl
 			.get_program_info_log(&program)
 			.unwrap_or_else(|| String::from("Unable to get program logs"));
-		let vert_log = gl
-			.get_shader_info_log(vert_shader)
-			.unwrap_or_else(|| String::from("Unable to get vertex shader logs"));
-		let frag_log = gl
-			.get_shader_info_log(frag_shader)
-			.unwrap_or_else(|| String::from("Unable to get frabment shader logs"));
+		let vert_log =
+			gl.get_shader_info_log(vert_shader).unwrap_or_else(|| {
+				String::from("Unable to get vertex shader logs")
+			});
+		let frag_log =
+			gl.get_shader_info_log(frag_shader).unwrap_or_else(|| {
+				String::from("Unable to get frabment shader logs")
+			});
 		let mut logs = String::from("Program Log:\n");
 		logs.push_str(&program_log);
 		logs.push_str("\nVertex Log:\n");
@@ -126,7 +139,9 @@ impl Program {
 		for attribute_name in attributes.iter() {
 			let location = gl.get_attrib_location(program, attribute_name);
 			if location < 0 {
-				warnings.push(ShaderWarning::AttributeNotFound(attribute_name.to_owned()));
+				warnings.push(ShaderWarning::AttributeNotFound(
+					attribute_name.to_owned(),
+				));
 				continue;
 			}
 			locations.insert(attribute_name.to_owned(), location as u32);
@@ -137,15 +152,21 @@ impl Program {
 		gl: &WebGl2RenderingContext,
 		program: &WebGlProgram,
 		uniforms: &[String],
-	) -> Result<(HashMap<String, WebGlUniformLocation>, Vec<ShaderWarning>), &'static str> {
+	) -> Result<
+		(HashMap<String, WebGlUniformLocation>, Vec<ShaderWarning>),
+		&'static str,
+	> {
 		let mut locations = HashMap::new();
 		let mut warnings = Vec::new();
 		locations.reserve(uniforms.len());
 		for uniform_name in uniforms.iter() {
-			let location = match gl.get_uniform_location(program, uniform_name) {
+			let location = match gl.get_uniform_location(program, uniform_name)
+			{
 				Some(l) => l,
 				None => {
-					warnings.push(ShaderWarning::UniformNotFound(uniform_name.to_owned()));
+					warnings.push(ShaderWarning::UniformNotFound(
+						uniform_name.to_owned(),
+					));
 					continue;
 				}
 			};

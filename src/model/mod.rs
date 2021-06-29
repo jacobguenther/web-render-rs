@@ -9,8 +9,6 @@ pub mod buffer;
 pub mod buffer_view;
 pub mod material;
 pub mod mesh;
-pub mod primitives;
-pub mod terrain;
 pub mod texture;
 
 use std::rc::Rc;

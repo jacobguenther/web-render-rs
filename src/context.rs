@@ -6,7 +6,12 @@
 // Description:
 
 use wasm_bindgen::JsCast;
-use web_sys::{Document, HtmlCanvasElement, WebGl2RenderingContext, Window};
+use web_sys::{
+	Document,
+	HtmlCanvasElement,
+	WebGl2RenderingContext,
+	Window,
+};
 
 pub struct Context {
 	pub window: Window,
@@ -44,5 +49,12 @@ impl Context {
 		self.canvas.set_width(width as u32);
 		self.canvas.set_height(height as u32);
 		self.gl.viewport(0, 0, width, height);
+	}
+	pub fn now(&self) -> Result<f64, &'static str> {
+		Ok(self
+			.window
+			.performance()
+			.ok_or("Window does not have performance")?
+			.now())
 	}
 }

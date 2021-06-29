@@ -1,7 +1,10 @@
+/ts/gltf
 /ts_build
+
 /target
 /pkg
+
 /assets/glTF-Samples
-/ts/gltf
+/assets/height_maps/test.png
 
 Cargo.lock

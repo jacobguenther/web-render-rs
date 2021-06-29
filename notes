@@ -3,7 +3,9 @@ Come here to get some easy copy pasta
 
 # build
 tsc -w
-cargo fmt && wasm-pack build --target web --release
+cargo fmt && wasm-pack build --target web --mode no-install --release
+cargo fmt && wasm-pack build --target web --mode no-install
+
 
 # dev
 cargo fmt

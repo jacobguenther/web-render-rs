@@ -8,7 +8,10 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use web_sys::{WebGl2RenderingContext, WebGlUniformLocation};
+use web_sys::{
+	WebGl2RenderingContext,
+	WebGlUniformLocation,
+};
 
 use super::texture::Texture;
 
@@ -63,7 +66,8 @@ impl Material {
 
 		let use_matallic_roughness_tex = match self.metallic_roughness_part {
 			MetallicRoughnessPart::Texture(ref t) => {
-				let metallic_roughness_loc = uniform_locations.get("METALLIC_ROUGHNESS_TEX");
+				let metallic_roughness_loc =
+					uniform_locations.get("METALLIC_ROUGHNESS_TEX");
 				gl.uniform1i(metallic_roughness_loc, texture_unit);
 				t.bind(gl, texture_unit as u32);
 				texture_unit += 1;
@@ -77,7 +81,8 @@ impl Material {
 				false
 			}
 		};
-		let use_metallic_roughness_tex_loc = uniform_locations.get("USE_METALLIC_ROUGHNESS_TEX");
+		let use_metallic_roughness_tex_loc =
+			uniform_locations.get("USE_METALLIC_ROUGHNESS_TEX");
 		gl.uniform1i(
 			use_metallic_roughness_tex_loc,
 			use_matallic_roughness_tex as i32,

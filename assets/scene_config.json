@@ -1,0 +1,141 @@
+{
+	"cameras": [
+		{
+			"id": "main",
+			"fovy": 45,
+			
+			"z_near": 0.1,
+			"z_far": 2000,
+
+			"eye": [0.0, 0.0, 10.0],
+			"center": [0.0, 0.0, 0.0],
+			"up": [0.0, 1.0, 0.0]
+		}
+	],
+	"shaders": [
+		{
+			"id": "general_vert",
+			"type": "vertex",
+			"path": "shaders/general.vert",
+			"attributes": [
+				{
+					"name": "POSITION",
+					"kind": "vec3"
+				},
+				{
+					"name:": "NORMAL",
+					"kind": "vec3"
+				},
+				{
+					"name:": "TANGENT",
+					"kind": "vec3"
+				},
+				{
+					"name:": "BITANGENT",
+					"kind": "vec3"
+				},
+				{
+					"name:": "COLOR",
+					"kind": "vec3"
+				},
+				{
+					"name:": "TEXCOORD_0",
+					"kind": "vec2"
+				},
+				{
+					"name:": "TEXCOORD_1",
+					"kind": "vec2"
+				},
+				{
+					"name:": "TEXCOORD_2",
+					"kind": "vec2"
+				},
+				{
+					"name:": "TEXCOORD_3",
+					"kind": "vec2"
+				}
+			],
+			"uniforms": [
+				{
+					"name:": "PROJECTION_MATRIX",
+					"kind": "mat4"
+				},
+				{
+					"name:": "VIEW_MATRIX",
+					"kind": "mat4"
+				},
+				{
+					"name:": "MODEL_MATRIX",
+					"kind": "mat4"
+				},
+				{
+					"name:": "CAMERA_POSITION",
+					"kind": "vec3"
+				}
+			]
+		},
+		{
+			"id": "pbr_frag",
+			"type": "fragment",
+			"path": "shaders/pbr.frag",
+			"uniforms": [
+				{
+					"name:": "DIFFUSE_TEX",
+					"kind": "sampler2d"
+				},
+				{
+					"name:": "NORMAL_TEX",
+					"kind": "sampler2d"
+				},
+				{
+					"name:": "METALLIC_ROUGHNESS_TEX",
+					"kind": "sampler2d"
+				},
+				{
+					"name:": "OCCLUSION_TEX",
+					"kind": "sampler2d"
+				},
+
+				{
+					"name:": "USE_DIFFUSE_TEX",
+					"kind": "bool"
+				},
+				{
+					"name:": "USE_NORMAL_TEX",
+					"kind": "bool"
+				},
+				{
+					"name:": "USE_METALLIC_ROUGHNESS_TEX",
+					"kind": "bool"
+				},
+				{
+					"name:": "USE_OCCLUSION_TEX",
+					"kind": "bool"
+				},
+
+				{
+					"name:": "METALLIC",
+					"kind": "float"
+				},
+				{
+					"name:": "ROUGHNESS",
+					"kind": "float"
+				},
+				{
+					"name:": "OCCLUSION",
+					"kind": "float"
+				}
+			]
+		}
+	],
+	"shader_programs": [
+		{
+			"id": "pbr",
+			"vertex_shader": "general_vert",
+			"fragment_shader": "pbr_frag"
+		}
+	],
+	"models": [
+
+	]
+}

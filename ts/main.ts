@@ -184,15 +184,19 @@ export async function load_model(name: string, uri: string): Promise<Asset> {
 	let materials = [];
 	if (gltf.materials) {
 		for (let material of gltf.materials) {
-			let normal = null;
-			if (material.normalTexture) {
-				normal = material.normalTexture.index;
-			}
+			let base_color = null;
 			let metallic_roughness = null;
 			if (material.pbrMetallicRoughness) {
+				if (material.pbrMetallicRoughness.baseColorTexture) {
+					base_color = material.pbrMetallicRoughness.baseColorTexture.index;
+				}
 				if (material.pbrMetallicRoughness.metallicRoughnessTexture) {
 					metallic_roughness = material.pbrMetallicRoughness.metallicRoughnessTexture.index;
 				}
+			}
+			let normal = null;
+			if (material.normalTexture) {
+				normal = material.normalTexture.index;
 			}
 			let occlusion = null;
 			if (material.occlusionTexture) {
@@ -200,7 +204,7 @@ export async function load_model(name: string, uri: string): Promise<Asset> {
 			}
 			let my_material = new Material(
 				name, 
-				material.pbrMetallicRoughness.baseColorTexture.index,
+				base_color,
 				normal,
 				metallic_roughness,
 				occlusion
@@ -218,21 +222,13 @@ export async function main() {
 	config.width = 800;
 	config.height = 600;
 	config.camera = new Camera(
-		90.0,   // fovy
+		45.0,   // fovy
 		0.1,    // znear
 		2000.0, // zfar
-		[0.0, 5.0, 5.0], // eye
+		[0.0, 0.0, 10.0], // eye
 		[0.0, 0.0, 0.0], // center
 		[0.0, 1.0, 0.0]  // up
 	);
-	// config.camera = new Camera(
-	// 	90.0,   // fovy
-	// 	0.1,    // znear
-	// 	2000.0,  // zfar
-	// 	[0.0, 50.0, 0.0], // eye
-	// 	[1.0, 50.0, 0.0], // center
-	// 	[0.0, 1.0, 0.0]   // up
-	// );
 	config.shaders = [		
 		new Shader(
 			"general_vert",
@@ -308,7 +304,7 @@ export async function main() {
 		// load_model("Suzanne", "assets/glTF-Samples/Suzanne/glTF/Suzanne.gltf"),
 		// load_model("Avocado", "assets/glTF-Samples/Avocado/glTF/Avocado.gltf"),
 		// load_model("Lantern", "assets/glTF-Samples/Lantern/glTF/Lantern.gltf"),
-		load_model("SciFiHelmet", "assets/glTF-Samples/SciFiHelmet/glTF/SciFiHelmet.gltf"),
+		// load_model("SciFiHelmet", "assets/glTF-Samples/SciFiHelmet/glTF/SciFiHelmet.gltf"),
 		// load_model("DamagedHelmet", "assets/glTF-Samples/DamagedHelmet/glTF/DamagedHelmet.gltf"),
 		// load_model("Sponza", "assets/glTF-Samples/Sponza/glTF/Sponza.gltf"),
 	])

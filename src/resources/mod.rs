@@ -5,28 +5,60 @@
 //
 // Description:
 
+pub mod image_future;
 pub mod traits;
 
-use std::{collections::HashMap, convert::TryFrom};
-use std::{fmt::Debug, rc::Rc};
+use std::{
+	collections::HashMap,
+	convert::TryFrom,
+};
+use std::{
+	fmt::Debug,
+	rc::Rc,
+};
 
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::{
+	JsCast,
+	JsValue,
+};
 use wasm_bindgen_futures::JsFuture;
 
-use web_sys::{HtmlImageElement, WebGl2RenderingContext};
-use web_sys::{Request, RequestInit, RequestMode, Response};
+use web_sys::{
+	Document,
+	HtmlImageElement,
+	WebGl2RenderingContext,
+};
+use web_sys::{
+	Request,
+	RequestInit,
+	RequestMode,
+	Response,
+};
 
 use crate::{
 	config::{
-		BufferViewIntermediate, MaterialIntermediate, ModelIntermediate, ProgramIntermediate,
+		BufferViewIntermediate,
+		MaterialIntermediate,
+		ModelIntermediate,
+		ProgramIntermediate,
 		ShaderIntermediate,
 	},
 	model::{
 		buffer::Buffer,
 		buffer_view::BufferView,
-		material::{Material, MetallicRoughnessPart, OcclusionPart},
-		mesh::{AttributeBufferViews, Mesh},
-		texture::{Sampler, Texture},
+		material::{
+			Material,
+			MetallicRoughnessPart,
+			OcclusionPart,
+		},
+		mesh::{
+			AttributeBufferViews,
+			Mesh,
+		},
+		texture::{
+			Sampler,
+			Texture,
+		},
 		Model,
 	},
 };
@@ -35,11 +67,17 @@ use crate::program::Program;
 use crate::shader::Shader;
 use crate::warning::*;
 
-use self::traits::{AddResourceT, NewResourceT};
+use self::{
+	image_future::ImageFuture,
+	traits::{
+		AddResourceT,
+		NewResourceT,
+	},
+};
 
 #[derive(Debug)]
-pub struct Resources<'c> {
-	gl: &'c WebGl2RenderingContext,
+pub struct Resources {
+	gl: Rc<WebGl2RenderingContext>,
 	pub strings: HashMap<String, Rc<String>>,
 	pub shaders: HashMap<String, Rc<Shader>>,
 	pub programs: HashMap<String, Rc<Program>>,
@@ -57,7 +95,7 @@ pub struct Resources<'c> {
 	pub models: HashMap<String, Rc<Model>>,
 }
 
-impl<'c> AddResourceT for Resources<'c> {
+impl AddResourceT for Resources {
 	fn add_string(&mut self, id: &str, string: &str) -> Option<&Rc<String>> {
 		self.strings
 			.insert(id.to_owned(), Rc::new(string.to_owned()));
@@ -68,24 +106,38 @@ impl<'c> AddResourceT for Resources<'c> {
 			.insert(id.to_owned(), Rc::new(shader.to_owned()));
 		self.shaders.get(id)
 	}
-	fn add_program(&mut self, id: &str, program: &Program) -> Option<&Rc<Program>> {
+	fn add_program(
+		&mut self,
+		id: &str,
+		program: &Program,
+	) -> Option<&Rc<Program>> {
 		self.programs
 			.insert(id.to_owned(), Rc::new(program.to_owned()));
 		self.programs.get(id)
 	}
 
-	fn add_texture(&mut self, id: &str, texture: &Texture) -> Option<&Rc<Texture>> {
+	fn add_texture(
+		&mut self,
+		id: &str,
+		texture: &Texture,
+	) -> Option<&Rc<Texture>> {
 		self.textures
 			.insert(id.to_owned(), Rc::new(texture.to_owned()));
 		self.textures.get(id)
 	}
-	fn add_sampler(&mut self, sampler: &Sampler) -> Option<(u32, &Rc<Sampler>)> {
+	fn add_sampler(
+		&mut self,
+		sampler: &Sampler,
+	) -> Option<(u32, &Rc<Sampler>)> {
 		let id = self.next_sampler_id;
 		self.samplers.insert(id, Rc::new(sampler.to_owned()));
 		self.next_sampler_id += 1;
 		self.samplers.get(&id).map(|s| (id, s))
 	}
-	fn add_material(&mut self, material: &Material) -> Option<(u32, &Rc<Material>)> {
+	fn add_material(
+		&mut self,
+		material: &Material,
+	) -> Option<(u32, &Rc<Material>)> {
 		let id = self.next_material_id;
 		self.materials.insert(id, Rc::new(material.to_owned()));
 		self.next_material_id += 1;
@@ -110,7 +162,7 @@ impl<'c> AddResourceT for Resources<'c> {
 	}
 }
 
-impl<'c> NewResourceT for Resources<'c> {
+impl NewResourceT for Resources {
 	fn new_string(&mut self, id: &str, string: &str) -> Option<&Rc<String>> {
 		self.add_string(id, string)
 	}
@@ -122,12 +174,13 @@ impl<'c> NewResourceT for Resources<'c> {
 	) -> Result<&Rc<Shader>, &'static str> {
 		if !matches!(
 			shader_type,
-			WebGl2RenderingContext::VERTEX_SHADER | WebGl2RenderingContext::FRAGMENT_SHADER
+			WebGl2RenderingContext::VERTEX_SHADER
+				| WebGl2RenderingContext::FRAGMENT_SHADER
 		) {
 			return Err("Shader type is not a vertex or fragment shader");
 		}
 
-		self.add_shader(id, &Shader::new(self.gl, shader_type, source)?)
+		self.add_shader(id, &Shader::new(&self.gl, shader_type, source)?)
 			.ok_or("Failed to insert shader")
 	}
 	fn new_program(
@@ -138,8 +191,13 @@ impl<'c> NewResourceT for Resources<'c> {
 		attribute_names: &[String],
 		uniform_names: &[String],
 	) -> Result<(&Rc<Program>, Vec<ShaderWarning>), String> {
-		let (program, warnings) =
-			Program::new(self.gl, vertex, fragment, attribute_names, uniform_names)?;
+		let (program, warnings) = Program::new(
+			&self.gl,
+			vertex,
+			fragment,
+			attribute_names,
+			uniform_names,
+		)?;
 
 		self.add_program(id, &program)
 			.ok_or_else(|| String::from("Failed to insert program"))
@@ -154,15 +212,19 @@ impl<'c> NewResourceT for Resources<'c> {
 		uniform_names: &[String],
 	) -> Result<(&Rc<Program>, Vec<ShaderWarning>), String> {
 		let (program, warnings) = {
-			let vertex = self
-				.shaders
-				.get(vertex_id)
-				.ok_or_else(|| String::from("Resources is missing vertex shader"))?;
-			let fragment = self
-				.shaders
-				.get(fragment_id)
-				.ok_or_else(|| String::from("Resources is missing fragment shader"))?;
-			Program::new(self.gl, vertex, fragment, attribute_names, uniform_names)?
+			let vertex = self.shaders.get(vertex_id).ok_or_else(|| {
+				String::from("Resources is missing vertex shader")
+			})?;
+			let fragment = self.shaders.get(fragment_id).ok_or_else(|| {
+				String::from("Resources is missing fragment shader")
+			})?;
+			Program::new(
+				&self.gl,
+				vertex,
+				fragment,
+				attribute_names,
+				uniform_names,
+			)?
 		};
 		self.add_program(id, &program)
 			.ok_or_else(|| String::from("Failed to insert program"))
@@ -176,7 +238,8 @@ impl<'c> NewResourceT for Resources<'c> {
 		texture_unit: u32,
 		sampler: &Rc<Sampler>,
 	) -> Result<&Rc<Texture>, &'static str> {
-		let texture = Texture::new(self.gl, image_element, texture_unit, sampler)?;
+		let texture =
+			Texture::new(&self.gl, image_element, texture_unit, sampler)?;
 		self.add_texture(id, &texture)
 			.ok_or("Failed to add new texture")
 	}
@@ -185,7 +248,10 @@ impl<'c> NewResourceT for Resources<'c> {
 		material: &MaterialIntermediate,
 		textures: &[Rc<Texture>],
 	) -> Result<(u32, &Rc<Material>), &'static str> {
-		let diffuse_tex = textures.get(material.diffuse as usize).cloned();
+		let diffuse_tex = material
+			.diffuse
+			.map(|i| textures.get(i as usize).cloned())
+			.flatten();
 
 		let normal_tex = material
 			.normal
@@ -227,7 +293,7 @@ impl<'c> NewResourceT for Resources<'c> {
 		buffer_type: u32,
 		data: &[u8],
 	) -> Result<(u32, &Rc<Buffer>), &'static str> {
-		let buffer = Buffer::new(self.gl, buffer_type, data)?;
+		let buffer = Buffer::new(&self.gl, buffer_type, data)?;
 		self.add_buffer(&buffer).ok_or("Failed to add buffer.")
 	}
 	fn new_mesh(
@@ -236,26 +302,64 @@ impl<'c> NewResourceT for Resources<'c> {
 		buffers: &[Rc<Buffer>],
 		index_view: &Option<BufferViewIntermediate>,
 		buffer_views: &[BufferViewIntermediate],
+		mode: u32,
 	) -> Result<(u32, &Rc<Mesh>), &'static str> {
 		let index_view = index_view.clone().map(|ref i| BufferView::new(i));
-		let attribute_buffer_views = AttributeBufferViews::try_from(buffer_views)?;
+		let attribute_buffer_views =
+			AttributeBufferViews::try_from(buffer_views)?;
 		let mesh = Mesh::new(
-			self.gl,
+			&self.gl,
 			material,
 			buffers,
 			&index_view,
 			&attribute_buffer_views,
+			mode,
 		)?;
 		self.add_mesh(&mesh).ok_or("Failed to add mesh.")
 	}
-	fn new_model(&mut self, id: &str, meshes: &[Rc<Mesh>]) -> Result<&Rc<Model>, &'static str> {
+	fn new_model(
+		&mut self,
+		id: &str,
+		meshes: &[Rc<Mesh>],
+	) -> Result<&Rc<Model>, &'static str> {
 		let model = Model::new(meshes);
 		self.add_model(id, &model).ok_or("Failed to add model")
 	}
 }
 
-impl<'c> Resources<'c> {
-	pub fn new(gl: &'c WebGl2RenderingContext) -> Self {
+// impl<'c> LoadResourceT for Resources<'c> {
+// fn load_config();
+// fn load_model();
+// fn load_mesh();
+// }
+
+pub async fn fetch_image(
+	document: &Document,
+	id: &str,
+	uri: &str,
+	parent_id: &str,
+) -> Result<HtmlImageElement, &'static str> {
+	let image = ImageFuture::new(uri)
+		.await
+		.map_err(|_e| "Failed to fetch image")?;
+
+	image.set_id(id);
+	image
+		.set_attribute("style", "dispay: none")
+		.map_err(|_e| "Failed to set attribute of image element")?;
+
+	let parent = document
+		.get_element_by_id(parent_id)
+		.ok_or("Failed to get image parent")?;
+	parent
+		.append_child(&image)
+		.map_err(|_e| "Failed to append image element to parent")?;
+
+	Ok(image)
+}
+
+impl Resources {
+	pub fn new(gl: Rc<WebGl2RenderingContext>) -> Self {
 		Self {
 			gl,
 			strings: HashMap::new(),
@@ -273,7 +377,10 @@ impl<'c> Resources<'c> {
 			models: HashMap::new(),
 		}
 	}
-	pub async fn load_texts(&mut self, sources: &[&str]) -> Result<Vec<Rc<String>>, JsValue> {
+	pub async fn load_texts(
+		&mut self,
+		sources: &[&str],
+	) -> Result<Vec<Rc<String>>, JsValue> {
 		let mut futures = Vec::with_capacity(sources.len());
 		let mut texts = Vec::with_capacity(sources.len());
 		for &source in sources.iter() {
@@ -288,7 +395,8 @@ impl<'c> Resources<'c> {
 				let request = Request::new_with_str_and_init(&uri, &opts)?;
 				request.headers().set("Accept", "application/json")?;
 				let window = web_sys::window().unwrap();
-				let response_value = JsFuture::from(window.fetch_with_request(&request));
+				let response_value =
+					JsFuture::from(window.fetch_with_request(&request));
 				futures.push((source, response_value));
 			} else {
 				texts.push(self.strings.get(source).unwrap().clone());
@@ -298,7 +406,8 @@ impl<'c> Resources<'c> {
 			let response_value = future.await?;
 			assert!(response_value.is_instance_of::<Response>());
 			let response: Response = response_value.dyn_into().unwrap();
-			let text = JsFuture::from(response.text()?).await?.as_string().unwrap();
+			let text =
+				JsFuture::from(response.text()?).await?.as_string().unwrap();
 			texts.push(Rc::clone(self.new_string(source, &text).unwrap()));
 		}
 		Ok(texts)
@@ -333,13 +442,14 @@ impl<'c> Resources<'c> {
 		let mut programs = Vec::with_capacity(data.len());
 		let mut warnings = Vec::new();
 		for info in data.iter() {
-			let (program, mut program_warnings) = self.new_program_from_shader_ids(
-				&info.id,
-				&info.vertex,
-				&info.fragment,
-				&info.attributes,
-				&info.uniforms,
-			)?;
+			let (program, mut program_warnings) = self
+				.new_program_from_shader_ids(
+					&info.id,
+					&info.vertex,
+					&info.fragment,
+					&info.attributes,
+					&info.uniforms,
+				)?;
 			warnings.append(&mut program_warnings);
 			programs.push(Rc::clone(program));
 		}
@@ -380,20 +490,24 @@ impl<'c> Resources<'c> {
 				let image_element = &image_elements[texture.source];
 				let texture_id = image_element.id();
 				let sampler = &samplers[texture.sampler];
-				let texture = self.new_texture(&texture_id, image_element, 0, sampler)?;
+				let texture =
+					self.new_texture(&texture_id, image_element, 0, sampler)?;
 				textures.push(Rc::clone(texture));
 			}
 
 			let mut materials = Vec::with_capacity(model_data.materials.len());
 			for material in model_data.materials.iter() {
-				let (_material_id, material) = self.new_material(material, &textures)?;
+				let (_material_id, material) =
+					self.new_material(material, &textures)?;
 				materials.push(Rc::clone(material));
 			}
 
 			let mut buffers = Vec::with_capacity(model_data.buffers.len() + 1);
 			for buffer_data in model_data.buffers.iter() {
-				let (_buffer_id, buffer) =
-					self.new_buffer(WebGl2RenderingContext::ARRAY_BUFFER, &buffer_data.0)?;
+				let (_buffer_id, buffer) = self.new_buffer(
+					WebGl2RenderingContext::ARRAY_BUFFER,
+					&buffer_data.0,
+				)?;
 				buffers.push(Rc::clone(buffer));
 			}
 
@@ -404,9 +518,13 @@ impl<'c> Resources<'c> {
 					Some(ref i) => {
 						let offset = i.buffer_offset.unwrap_or(0) as usize;
 						let index_buffer_size = offset + i.length;
-						let slice = &model_data.buffers[i.buffer].0[offset..index_buffer_size];
-						let (_index_buffer_id, index_buffer) =
-							self.new_buffer(WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER, slice)?;
+						let slice = &model_data.buffers[i.buffer].0
+							[offset..index_buffer_size];
+						let (_index_buffer_id, index_buffer) = self
+							.new_buffer(
+								WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER,
+								slice,
+							)?;
 						buffers.push(Rc::clone(index_buffer));
 						let mut view = i.clone();
 						view.buffer = buffers.len() - 1;
@@ -419,8 +537,13 @@ impl<'c> Resources<'c> {
 				} else {
 					Rc::new(Material::default())
 				};
-				let (_mesh_id, mesh) =
-					self.new_mesh(&material, &buffers, &index_view, &mesh.buffer_views)?;
+				let (_mesh_id, mesh) = self.new_mesh(
+					&material,
+					&buffers,
+					&index_view,
+					&mesh.buffer_views,
+					WebGl2RenderingContext::TRIANGLES,
+				)?;
 				meshes.push(Rc::clone(mesh));
 			}
 			let model = self.new_model(&model_data.id, &meshes)?;

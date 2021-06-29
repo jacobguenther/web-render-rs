@@ -5,31 +5,55 @@
 //
 // Description:
 
-use web_sys::HtmlImageElement;
+use web_sys::{
+	Document,
+	HtmlImageElement,
+};
 
 use crate::{
-	config::{BufferViewIntermediate, MaterialIntermediate},
+	config::{
+		BufferViewIntermediate,
+		MaterialIntermediate,
+	},
 	model::{
 		buffer::Buffer,
 		material::Material,
 		mesh::Mesh,
-		texture::{Sampler, Texture},
+		texture::{
+			Sampler,
+			Texture,
+		},
 		Model,
 	},
 	program::Program,
 };
-use crate::{shader::Shader, warning::ShaderWarning};
+use crate::{
+	shader::Shader,
+	warning::ShaderWarning,
+};
 
 use std::rc::Rc;
 
 pub trait AddResourceT {
 	fn add_string(&mut self, id: &str, string: &str) -> Option<&Rc<String>>;
 	fn add_shader(&mut self, id: &str, shader: &Shader) -> Option<&Rc<Shader>>;
-	fn add_program(&mut self, id: &str, program: &Program) -> Option<&Rc<Program>>;
+	fn add_program(
+		&mut self,
+		id: &str,
+		program: &Program,
+	) -> Option<&Rc<Program>>;
 
-	fn add_texture(&mut self, id: &str, texture: &Texture) -> Option<&Rc<Texture>>;
-	fn add_sampler(&mut self, sampler: &Sampler) -> Option<(u32, &Rc<Sampler>)>;
-	fn add_material(&mut self, material: &Material) -> Option<(u32, &Rc<Material>)>;
+	fn add_texture(
+		&mut self,
+		id: &str,
+		texture: &Texture,
+	) -> Option<&Rc<Texture>>;
+	fn add_sampler(&mut self, sampler: &Sampler)
+		-> Option<(u32, &Rc<Sampler>)>;
+	fn add_material(
+		&mut self,
+		material: &Material,
+	) -> Option<(u32, &Rc<Material>)>;
 
 	fn add_buffer(&mut self, buffer: &Buffer) -> Option<(u32, &Rc<Buffer>)>;
 	fn add_mesh(&mut self, mesh: &Mesh) -> Option<(u32, &Rc<Mesh>)>;
@@ -84,16 +108,28 @@ pub trait NewResourceT {
 		buffers: &[Rc<Buffer>],
 		index_view: &Option<BufferViewIntermediate>,
 		buffer_views: &[BufferViewIntermediate],
+		mode: u32,
 	) -> Result<(u32, &Rc<Mesh>), &'static str>;
-	fn new_model(&mut self, id: &str, meshes: &[Rc<Mesh>]) -> Result<&Rc<Model>, &'static str>;
+	fn new_model(
+		&mut self,
+		id: &str,
+		meshes: &[Rc<Mesh>],
+	) -> Result<&Rc<Model>, &'static str>;
 }
 pub trait LoadResourceT {
-	fn fetch_file();
-	fn batch_fetch_files();
+	// fn fetch_file();
+	// fn batch_fetch_files();
 
-	fn load_config();
-	fn load_model();
-	fn load_mesh();
+	fn fetch_image(
+		document: &Document,
+		id: &str,
+		uri: &str,
+		parent_id: &str,
+	) -> Result<HtmlImageElement, &'static str>;
+
+	// fn load_config();
+	// fn load_model();
+	// fn load_mesh();
 }
 pub trait GetResourceT {
 	fn get_text(id: &str) -> Option<String>;

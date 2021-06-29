@@ -8,10 +8,21 @@
 
 precision highp int;
 
+#define POINT_LIGHT_COUNT 4
+#define DIRECTION_LIGHT_COUNT 1
+
 struct PointLight {
 	vec3 position;  // meters
 	vec3 color;     // 
 };
+
+struct DirectionLight {
+	vec3 direction;
+	vec3 color;
+};
+
+uniform PointLight[POINT_LIGHT_COUNT] POINT_LIGHTS;
+uniform DirectionLight[DIRECTION_LIGHT_COUNT] DIRECTION_LIGHTS;
 
 uniform bool USE_DIFFUSE_TEX;
 uniform sampler2D DIFFUSE_TEX;
@@ -30,20 +41,19 @@ uniform float OCCLUSION;
 
 uniform vec3 CAMERA_POS;
 
-in vec3 v_position;
-in vec3 v_normal;
-in vec3 v_tangent;
-in vec3 v_bitangent;
+// in vec3 v_position;
+// in vec3 v_normal;
+// in vec3 v_tangent;
+// in vec3 v_bitangent;
 in vec3 v_color;
 in vec2 v_texcoord_0;
-in vec2 v_texcoord_1;
-in vec2 v_texcoord_2;
-in vec2 v_texcoord_3;
-
+// in vec2 v_texcoord_1;
+// in vec2 v_texcoord_2;
+// in vec2 v_texcoord_3;
 in vec3 v_world_position;
-in vec3 v_world_normal;
-
 in vec3 v_view_position;
+in vec3 v_world_normal;
+in mat3 v_tbn;
 
 layout(location = 0) out lowp vec4 frag_color;
 
@@ -57,9 +67,8 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0);
 
 void main() {
 	PointLight light;
-	light.position = vec3(-2, 10.0, 5.0);
-	// light.position = vec3(0.0, 100.0, 0.0);
-	light.color = vec3(5.0, 5.0, 5.0);
+	light.position = vec3(200.0, 400.0, 0.0);
+	light.color = vec3(2.0, 2.0, 2.0);
 
 	vec3 N = getNormalFromMap();
 	vec3 V = normalize(CAMERA_POS - v_world_position);
@@ -70,12 +79,12 @@ void main() {
 	} else {
 		albedo = v_color;
 	}
+	albedo = vec3(1.0);
 
 	float metallic = 0.0;
 	float roughness = 0.0;
 	if (USE_METALLIC_ROUGHNESS_TEX) {
-		vec3 metallic_roughness = texture(METALLIC_ROUGHNESS_TEX, v_texcoord_0).rgb;
-		metallic_roughness = normalize(metallic_roughness);
+		vec2 metallic_roughness = texture(METALLIC_ROUGHNESS_TEX, v_texcoord_0).rg;
 		metallic = metallic_roughness.r;
 		roughness = metallic_roughness.g;
 	} else {
@@ -112,7 +121,7 @@ void main() {
 
 		vec3 numerator = NDF * G * F;
 		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
-		vec3 specular = numerator / max(denominator, 0.0000001);  
+		vec3 specular = numerator / max(denominator, 0.000001);  
 
 		float NdotL = max(dot(N, L), 0.0);
 		light_out = (kD * albedo / PI + specular) * radiance * NdotL;
@@ -123,32 +132,40 @@ void main() {
 
 	vec3 color = ambient + light_out;
 
-    color = vec3(v_position.y);
 	frag_color = vec4(color, 1.0);
 }
 
 vec3 getNormalFromMap() {
 	vec3 norm = vec3(0.0);
+
+	vec3 n = normalize(v_world_normal);
+	vec3 Q1 = dFdx(v_world_position);
+	vec3 Q2 = dFdy(v_world_position);
+	if (length(n) < 0.98) {
+		norm = normalize(cross(Q1, Q2));
+	} else {
+		norm = n;
+	}
+
 	if (USE_NORMAL_TEX) {
 		vec3 tangentNormal = texture(NORMAL_TEX, v_texcoord_0).xyz * 2.0 - 1.0;
 		tangentNormal = normalize(tangentNormal);
 
-		vec3 Q1 = dFdx(v_world_position);
-		vec3 Q2 = dFdy(v_world_position);
 		vec2 st1 = dFdx(v_texcoord_0);
 		vec2 st2 = dFdy(v_texcoord_0);
 
-		vec3 N = normalize(v_world_normal);
-		vec3 T = normalize(Q1*st2.t - Q2*st1.t);
-		vec3 B = -normalize(cross(N, T));
-		mat3 TBN = mat3(T, B, N);
+		mat3 TBN;
+		bool USE_TBN = false;
+		if (USE_TBN) {
+			TBN = v_tbn;
+		} else {
+			vec3 t = normalize(Q1*st2.t - Q2*st1.t);
+			vec3 b = -normalize(cross(n, t));
+			TBN = mat3(t, b, n);
+		}
 
-		return normalize(TBN * tangentNormal);
-	} else {
-		norm = v_world_normal;
+		norm = normalize(TBN * tangentNormal);
 	}
-
-	norm = v_world_normal;
 
 	return normalize(norm);
 }
