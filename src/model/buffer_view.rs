@@ -5,7 +5,7 @@
 //
 // Description:
 
-use crate::config::BufferViewIntermediate;
+use crate::config::scene_config::BufferViewConfig;
 
 #[derive(Copy, Clone, Debug)]
 pub struct BufferView {
@@ -20,7 +20,7 @@ pub struct BufferView {
 	pub component_type: u32,
 }
 impl BufferView {
-	pub fn new(intermediate: &BufferViewIntermediate) -> Self {
+	pub fn new(intermediate: &BufferViewConfig) -> Self {
 		let buffer_offset = intermediate.buffer_offset.unwrap_or(0);
 		let offset = intermediate.offset.unwrap_or(0);
 		Self {

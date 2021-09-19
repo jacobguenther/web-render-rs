@@ -13,6 +13,8 @@ use web_sys::{
 	Window,
 };
 
+use crate::config::engine_config::EngineConfig;
+
 pub struct Context {
 	pub window: Window,
 	pub document: Document,
@@ -20,11 +22,11 @@ pub struct Context {
 	pub gl: WebGl2RenderingContext,
 }
 impl Context {
-	pub fn new(canvas_id: &str) -> Result<Self, &'static str> {
+	pub fn new(engine_config: &EngineConfig) -> Result<Self, &'static str> {
 		let window = web_sys::window().ok_or("Failed to get window")?;
 		let document = window.document().ok_or("Failed to get document")?;
 		let canvas = document
-			.get_element_by_id(canvas_id)
+			.get_element_by_id(&engine_config.canvas_id)
 			.ok_or("Faild to find element with given id for canvas")?
 			.dyn_into::<web_sys::HtmlCanvasElement>()
 			.map_err(|_err| "Element is not a canvas")?;
@@ -34,12 +36,16 @@ impl Context {
 			.ok_or("Failed to create webgl context")?
 			.dyn_into::<WebGl2RenderingContext>()
 			.map_err(|_err| "Failed to create webgl context")?;
-		Ok(Self {
+
+		let context = Self {
 			window,
 			document,
 			canvas,
 			gl,
-		})
+		};
+		context.set_size(engine_config.width, engine_config.height);
+
+		Ok(context)
 	}
 	pub fn set_size(&self, width: u32, height: u32) {
 		self.canvas.set_width(width);

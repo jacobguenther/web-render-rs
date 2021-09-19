@@ -5,7 +5,7 @@
 //
 // Description:
 
-use crate::config::CameraIntermediate;
+use crate::config::scene_config::CameraConfig;
 use cgmath::{
 	InnerSpace,
 	Matrix3,
@@ -31,15 +31,11 @@ pub struct Camera {
 	pub position: Point3<f32>,
 }
 impl Camera {
-	pub fn new(
-		intermediate: &CameraIntermediate,
-		width: u32,
-		height: u32,
-	) -> Self {
-		let eye = Point3::from(intermediate.eye);
-		let center = Point3::from(intermediate.center);
+	pub fn new(config: &CameraConfig, width: u32, height: u32) -> Self {
+		let eye = Point3::from(config.eye);
+		let center = Point3::from(config.center);
 
-		let up = Vector3::from(intermediate.up); //.normalize();
+		let up = Vector3::from(config.up); //.normalize();
 
 		// fix this
 		let front = (center - eye).normalize();
@@ -48,17 +44,17 @@ impl Camera {
 		let basis = Matrix3::<f32>::from_cols(front, side, new_up);
 
 		Self {
-			fovy: intermediate.fovy,
+			fovy: config.fov_y,
 			aspect: width as f32 / height as f32,
-			znear: intermediate.znear,
-			zfar: intermediate.zfar,
+			znear: config.z_near,
+			zfar: config.z_far,
 
 			eye,
 			center,
 			up,
 
 			orientation: Quaternion::from(basis),
-			position: Point3::from(intermediate.eye),
+			position: Point3::from(config.eye),
 		}
 	}
 	pub fn view_matrix(&self) -> Matrix4<f32> {

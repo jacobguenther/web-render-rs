@@ -12,24 +12,34 @@ pub fn gen_notify_event_body_queue(item: TokenStream) -> TokenStream {
 	} else {
 		panic!("expected string literal")
 	};
-	let parts: Vec<&str> = s.split_whitespace().collect();
-	let subscribers = parts[0];
-	let events = parts[1];
-	let notify_func = parts[2];
 
-	format!(
-		"
-		if !(self.{}.is_empty() || self.{}.is_empty()) {{
-			self.{}.iter().for_each(|subscriber| {{
-				self.{}.iter().for_each(|event| {{
-					subscriber.borrow_mut().{}(event);
-				}});
-			}})
-		}}",
-		events, subscribers, subscribers, events, notify_func
-	)
-	.parse()
-	.unwrap()
+	let mut p = s.split_whitespace();
+	let subscribers = p.next().unwrap();
+	let events = p.next().unwrap();
+	let notify_func = p.next().unwrap();
+
+	let mut out = String::new();
+	out.push_str("if !(self.");
+	out.push_str(events);
+	out.push_str(".is_empty() || self.");
+	out.push_str(subscribers);
+	out.push_str(".is_empty()) {\n");
+
+	out.push_str("\tself.");
+	out.push_str(subscribers);
+	out.push_str(".iter().for_each(|subscriber| {\n");
+
+	out.push_str("\t\tself.");
+	out.push_str(events);
+	out.push_str(".iter().for_each(|event| {\n");
+
+	out.push_str("\t\t\tsubscriber.borrow_mut().");
+	out.push_str(notify_func);
+	out.push_str("(event);\n");
+
+	out.push_str("});\n})\n}\n");
+
+	out.parse().unwrap()
 }
 #[proc_macro]
 pub fn gen_notify_event_body_single(item: TokenStream) -> TokenStream {
@@ -40,18 +50,27 @@ pub fn gen_notify_event_body_single(item: TokenStream) -> TokenStream {
 		panic!("expected string literal")
 	};
 
-	let parts: Vec<&str> = s.split_whitespace().collect();
-	let subscribers = parts[0];
-	let event = parts[1];
-	let notify_func = parts[2];
-	
-	format!(
-		"
-		if let Some(ref event) = self.{} {{
-			self.{}.iter().for_each(|subscriber| {{
-				subscriber.borrow_mut().{}(event);
-			}});
-		}}", event, subscribers, notify_func).parse().unwrap()
+	let mut p = s.split_whitespace();
+	let subscribers = p.next().unwrap();
+	let event = p.next().unwrap();
+	let notify_func = p.next().unwrap();
+
+	let mut out = String::new();
+	out.push_str("if let Some(ref event) = self.");
+	out.push_str(event);
+	out.push_str("{\n");
+
+	out.push_str("\tself.");
+	out.push_str(subscribers);
+	out.push_str(".iter().for_each(|subscriber| {\n");
+
+	out.push_str("subscriber.borrow_mut().");
+	out.push_str(notify_func);
+	out.push_str("(event);\n");
+
+	out.push_str("});\n}\n");
+
+	out.parse().unwrap()
 }
 
 #[proc_macro]
@@ -63,13 +82,12 @@ pub fn create_callback(item: TokenStream) -> TokenStream {
 		panic!("expected string literal");
 	};
 
-	let parts: Vec<&str> = s.split(" ").collect();
-
-	let field = parts[0];
-	let web_sys_event_type = parts[1];
-	let event_type = parts[2];
-	let element = parts[3];
-	let callback_type_str = parts[4];
+	let mut p = s.split_whitespace();
+	let field = p.next().unwrap();
+	let web_sys_event_type = p.next().unwrap();
+	let event_type = p.next().unwrap();
+	let element = p.next().unwrap();
+	let callback_type_str = p.next().unwrap();
 
 	let mut out = String::from("{");
 	out.push_str("let input_handler = input_handler.clone();");

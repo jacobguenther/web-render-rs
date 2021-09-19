@@ -7,6 +7,7 @@
 
 use std::rc::Rc;
 
+use crate::context::Context;
 use crate::{
 	model::Drawable,
 	program::Program,
@@ -22,7 +23,16 @@ use cgmath::{
 	Point3,
 	Vector3,
 };
-use web_sys::WebGl2RenderingContext;
+use wasm_bindgen::{
+	JsCast,
+	JsValue,
+};
+use web_sys::{
+	CanvasRenderingContext2d,
+	HtmlCanvasElement,
+	HtmlImageElement,
+	WebGl2RenderingContext,
+};
 
 impl Drawable for Terrain {
 	fn draw(&self, gl: &WebGl2RenderingContext, program: &Program) {
@@ -45,6 +55,73 @@ impl Terrain {
 	}
 	pub fn scale(&self) -> &Vector3<f32> {
 		&self.scale
+	}
+	pub async fn generate_from_image(
+		gl: &WebGl2RenderingContext,
+		chunk_size: usize,
+		scale: &Vector3<f32>,
+		context: Context,
+		image: HtmlImageElement,
+	) -> Result<Self, JsValue> {
+		let heights = {
+			let width = image.width() as usize;
+			let height = image.height() as usize;
+			if width != height {
+				return Err(JsValue::from_str(
+					"Height map must have equal dimensions",
+				));
+			}
+
+			let canvas = context
+				.document
+				.create_element("canvas")?
+				.dyn_into::<HtmlCanvasElement>()?;
+			canvas.set_width(width as u32);
+			canvas.set_height(height as u32);
+
+			let context_2d = canvas
+				.get_context("2d")?
+				.ok_or_else(|| JsValue::from_str("Failed to context object"))?
+				.dyn_into::<CanvasRenderingContext2d>()?;
+			let dx = 0.0;
+			let dy = 0.0;
+			let dw = width as f64;
+			let dh = height as f64;
+			context_2d.draw_image_with_html_image_element_and_dw_and_dh(
+				&image, dx, dy, dw, dh,
+			)?;
+
+			let canvas_wrapper = context
+				.document
+				.get_element_by_id("canvas_wrapper")
+				.ok_or_else(|| {
+					JsValue::from_str(
+						"Failed to get element with id canvas_wrapper",
+					)
+				})?;
+			canvas_wrapper.append_child(&canvas)?;
+
+			let sx = dx;
+			let sy = dy;
+			let sw = dw;
+			let sh = dh;
+			let image_data = context_2d.get_image_data(sx, sy, sw, sh)?;
+			let data = image_data.data();
+
+			let mut heights = Vec::with_capacity(width * height);
+
+			let mut i = 0;
+			for _row in 0..width {
+				for _col in 0..height {
+					let height = data[i] as f32;
+					heights.push(height);
+					i += 4;
+				}
+			}
+			heights
+		};
+
+		Ok(Terrain::generate(&gl, chunk_size, &scale, &heights)?)
 	}
 	pub fn generate(
 		gl: &WebGl2RenderingContext,
@@ -89,7 +166,7 @@ impl Terrain {
 				chunk_size,
 			);
 		}
-		let mesh = generator.generate_mesh(gl, MeshMode::IndexedTriangles);
+		let mesh = generator.generate_rc_mesh(gl, MeshMode::IndexedTriangles);
 
 		Ok(Self {
 			chunk_size,

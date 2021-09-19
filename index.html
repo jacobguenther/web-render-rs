@@ -7,9 +7,173 @@
 </head>
 <body style="background-color: brown;">
 	<h1>Rust/WAMS + WebGL Demo</h1>
+
 	<p>FPS: <span id="fps"></span></p>
 	<canvas id="webgl-canvas"></canvas>
 	<p id="mouse-location"></p>
+
+	<math aria-describedby="superellipse-description">
+		<msup>
+			<mfenced>
+				<mo>|</mo>
+				<mfrac><mi>x</mi><mi>a</mi></mfrac>
+				<mo>|</mo>
+			</mfenced>
+			<mn>2</mn>
+		</msup>
+		<mo>+</mo>
+		<msup>
+			<mfenced>
+				<mo>|</mo>
+				<mfrac><mi>y</mi><mi>b</mi></mfrac>
+				<mo>|</mo>
+			</mfenced>
+			<mn>2</mn>
+		</msup> 
+		<mo>=</mo><mn>1</mn>
+	</math>
+	<p id="superellipse-description">
+		Equation of a superellipse. Requires a browser that implements the
+		<a href="https://developer.mozilla.org/en-US/docs/Web/MathML">MathML specification</a>
+		to render properly. Absolute value of x over a squared plus the ablolute
+		value of y over b squared equals 1.
+	</p>
+
+	<form>
+		<fieldset>
+			<legend>Superellipse parameters</legend>
+
+			<div id="superellipse-wrapper-a">
+				<label for="superellipse-input-a">a</label>
+				<input id="superellipse-input-a"
+					name="superellipse-input-a"
+					type="range"
+					min="0"
+					max="10"
+					value="1"
+					step="0.01" >
+				<span>a = <span id="superellipse-value-a"></span></span>
+			</div>
+
+			<div id="superellipse-wrapper-b">
+				<label for="superellipse-input-b">b</label>
+				<input id="superellipse-input-b"
+					name="superellipse-input-b"
+					type="range"
+					min="0"
+					max="10"
+					value="1"
+					step="0.01">
+				<span>b = <span id="superellipse-value-b"></span></span>
+			</div>
+
+			<div id="superellipse-wrapper-n">
+				<label for="superellipse-input-n">n</label>
+				<input id="superellipse-input-n"
+					name="superellipse-input-n"
+					type="range"
+					min="0"
+					max="10"
+					value="2"
+					step="0.01">
+				<span>n = <span id="superellipse-value-n"></span></span>
+			</div>
+		</fieldset>
+
+		<fieldset>
+			<legend>Superellipse parameters</legend>
+
+			<div id="supershape-2d-wrapper-a">
+				<label for="supershape-2d-input-a">a</label>
+				<input id="supershape-2d-input-a"
+					name="supershape-2d-input-a"
+					type="range"
+					min="0"
+					max="10"
+					value="1"
+					step="0.01" >
+				<span>a = <span id="supershape-2d-value-a"></span></span>
+			</div>
+			<div id="supershape-2d-wrapper-b">
+				<label for="supershape-2d-input-b">b</label>
+				<input id="supershape-2d-input-b"
+					name="supershape-2d-input-b"
+					type="range"
+					min="0"
+					max="10"
+					value="1"
+					step="0.01">
+				<span>b = <span id="supershape-2d-value-b"></span></span>
+			</div>
+
+			<div id="supershape-2d-wrapper-n-1">
+				<label for="supershape-2d-input-n-1">n1</label>
+				<input id="supershape-2d-input-n-1"
+					name="supershape-2d-input-n-1"
+					type="range"
+					min="0"
+					max="10"
+					value="1"
+					step="0.1">
+				<span>n1 = <span id="supershape-2d-value-n-1"></span></span>
+			</div>
+			<div id="supershape-2d-wrapper-n-2">
+				<label for="supershape-2d-input-n-2">n2</label>
+				<input id="supershape-2d-input-n-2"
+					name="supershape-2d-input-n-2"
+					type="range"
+					min="0"
+					max="10"
+					value="1"
+					step="0.1">
+				<span>n2 = <span id="supershape-2d-value-n-2"></span></span>
+			</div>
+			<div id="supershape-2d-wrapper-n-3">
+				<label for="supershape-2d-input-n-3">n3</label>
+				<input id="supershape-2d-input-n-3"
+					name="supershape-2d-input-n-3"
+					type="range"
+					min="0"
+					max="10"
+					value="1"
+					step="0.1">
+				<span>n3 = <span id="supershape-2d-value-n-3"></span></span>
+			</div>
+
+			<div id="supershape-2d-wrapper-m">
+				<label for="supershape-2d-input-m">m</label>
+				<input id="supershape-2d-input-m"
+					name="supershape-2d-input-m"
+					type="range"
+					min="0"
+					max="10"
+					value="0"
+					step="1">
+				<span>m = <span id="supershape-2d-value-m"></span></span>
+			</div>
+		</fieldset>
+
+		<fieldset>
+			<ul>
+				<li><input type="button" value="Sol"></li>
+				<li><input type="button" value="Mercury"></li>
+				<li><input type="button" value="Venus"></li>
+				<li>
+					<input type="button" value="Earth">
+					<ul>
+						<li><input type="button" value="Moon"></li>
+					</ul>
+				</li>
+				<li>
+					<input type="button" value="Mars">
+					<ul>
+						<li><input type="button" value="Phobos"></li>
+						<li><input type="button" value="Deimos"></li>
+					</ul>
+				</li>
+			</ul>
+		</fieldset>
+	</form>
 	<section id="controlls"></section>
 	<div id="image_wrapper" style="display: none;">
 	</div>

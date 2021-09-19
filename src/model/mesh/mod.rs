@@ -23,7 +23,7 @@ use super::material::Material;
 use super::Drawable;
 use crate::program::attribute_locations;
 use crate::{
-	config::BufferViewIntermediate,
+	config::scene_config::BufferViewConfig,
 	program::Program,
 };
 
@@ -39,9 +39,9 @@ pub struct AttributeBufferViews {
 	pub texcoord_2: Option<BufferView>,
 	pub texcoord_3: Option<BufferView>,
 }
-impl TryFrom<&[BufferViewIntermediate]> for AttributeBufferViews {
+impl TryFrom<&[BufferViewConfig]> for AttributeBufferViews {
 	type Error = &'static str;
-	fn try_from(views: &[BufferViewIntermediate]) -> Result<Self, Self::Error> {
+	fn try_from(views: &[BufferViewConfig]) -> Result<Self, Self::Error> {
 		let mut position = None;
 		let mut normal = None;
 		let mut tangent = None;

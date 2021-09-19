@@ -35,13 +35,20 @@ use web_sys::{
 	Response,
 };
 
+use crate::camera::Camera;
+use crate::config::scene_config::{
+	AttributeConfig,
+	CameraConfig,
+	SceneConfig,
+	UniformConfig,
+};
 use crate::{
-	config::{
-		BufferViewIntermediate,
-		MaterialIntermediate,
-		ModelIntermediate,
-		ProgramIntermediate,
-		ShaderIntermediate,
+	config::scene_config::{
+		BufferViewConfig,
+		MaterialConfig,
+		ModelConfig,
+		ProgramConfig,
+		ShaderConfig,
 	},
 	model::{
 		buffer::Buffer,
@@ -78,6 +85,9 @@ use self::{
 #[derive(Debug)]
 pub struct Resources {
 	gl: Rc<WebGl2RenderingContext>,
+
+	pub cameras: HashMap<String, Rc<Camera>>,
+
 	pub strings: HashMap<String, Rc<String>>,
 	pub shaders: HashMap<String, Rc<Shader>>,
 	pub programs: HashMap<String, Rc<Program>>,
@@ -96,6 +106,12 @@ pub struct Resources {
 }
 
 impl AddResourceT for Resources {
+	fn add_camera(&mut self, id: &str, camera: &Camera) -> Option<&Rc<Camera>> {
+		self.cameras
+			.insert(id.to_owned(), Rc::new(camera.to_owned()));
+		self.cameras.get(id)
+	}
+
 	fn add_string(&mut self, id: &str, string: &str) -> Option<&Rc<String>> {
 		self.strings
 			.insert(id.to_owned(), Rc::new(string.to_owned()));
@@ -163,41 +179,45 @@ impl AddResourceT for Resources {
 }
 
 impl NewResourceT for Resources {
+	fn new_camera(
+		&mut self,
+		config: &CameraConfig,
+		width: u32,
+		height: u32,
+	) -> Option<&Rc<Camera>> {
+		self.add_camera(&config.id, &Camera::new(config, width, height))
+	}
+
 	fn new_string(&mut self, id: &str, string: &str) -> Option<&Rc<String>> {
 		self.add_string(id, string)
 	}
 	fn new_shader(
 		&mut self,
 		id: &str,
-		shader_type: u32,
+		shader_type: &str,
 		source: &str,
+		attributes: &[AttributeConfig],
+		uniforms: &[UniformConfig],
 	) -> Result<&Rc<Shader>, &'static str> {
-		if !matches!(
-			shader_type,
-			WebGl2RenderingContext::VERTEX_SHADER
-				| WebGl2RenderingContext::FRAGMENT_SHADER
-		) {
-			return Err("Shader type is not a vertex or fragment shader");
-		}
+		let shader_type = match shader_type {
+			"vertex" => WebGl2RenderingContext::VERTEX_SHADER,
+			"fragment" => WebGl2RenderingContext::FRAGMENT_SHADER,
+			_ => return Err("Shader type is not 'vertex' or 'fragment'"),
+		};
 
-		self.add_shader(id, &Shader::new(&self.gl, shader_type, source)?)
-			.ok_or("Failed to insert shader")
+		self.add_shader(
+			id,
+			&Shader::new(&self.gl, shader_type, source, attributes, uniforms)?,
+		)
+		.ok_or("Failed to insert shader")
 	}
 	fn new_program(
 		&mut self,
 		id: &str,
 		vertex: &Shader,
 		fragment: &Shader,
-		attribute_names: &[String],
-		uniform_names: &[String],
 	) -> Result<(&Rc<Program>, Vec<ShaderWarning>), String> {
-		let (program, warnings) = Program::new(
-			&self.gl,
-			vertex,
-			fragment,
-			attribute_names,
-			uniform_names,
-		)?;
+		let (program, warnings) = Program::new(&self.gl, vertex, fragment)?;
 
 		self.add_program(id, &program)
 			.ok_or_else(|| String::from("Failed to insert program"))
@@ -208,8 +228,6 @@ impl NewResourceT for Resources {
 		id: &str,
 		vertex_id: &str,
 		fragment_id: &str,
-		attribute_names: &[String],
-		uniform_names: &[String],
 	) -> Result<(&Rc<Program>, Vec<ShaderWarning>), String> {
 		let (program, warnings) = {
 			let vertex = self.shaders.get(vertex_id).ok_or_else(|| {
@@ -218,13 +236,7 @@ impl NewResourceT for Resources {
 			let fragment = self.shaders.get(fragment_id).ok_or_else(|| {
 				String::from("Resources is missing fragment shader")
 			})?;
-			Program::new(
-				&self.gl,
-				vertex,
-				fragment,
-				attribute_names,
-				uniform_names,
-			)?
+			Program::new(&self.gl, vertex, fragment)?
 		};
 		self.add_program(id, &program)
 			.ok_or_else(|| String::from("Failed to insert program"))
@@ -245,7 +257,7 @@ impl NewResourceT for Resources {
 	}
 	fn new_material(
 		&mut self,
-		material: &MaterialIntermediate,
+		material: &MaterialConfig,
 		textures: &[Rc<Texture>],
 	) -> Result<(u32, &Rc<Material>), &'static str> {
 		let diffuse_tex = material
@@ -300,8 +312,8 @@ impl NewResourceT for Resources {
 		&mut self,
 		material: &Rc<Material>,
 		buffers: &[Rc<Buffer>],
-		index_view: &Option<BufferViewIntermediate>,
-		buffer_views: &[BufferViewIntermediate],
+		index_view: &Option<BufferViewConfig>,
+		buffer_views: &[BufferViewConfig],
 		mode: u32,
 	) -> Result<(u32, &Rc<Mesh>), &'static str> {
 		let index_view = index_view.clone().map(|ref i| BufferView::new(i));
@@ -326,12 +338,6 @@ impl NewResourceT for Resources {
 		self.add_model(id, &model).ok_or("Failed to add model")
 	}
 }
-
-// impl<'c> LoadResourceT for Resources<'c> {
-// fn load_config();
-// fn load_model();
-// fn load_mesh();
-// }
 
 pub async fn fetch_image(
 	document: &Document,
@@ -358,10 +364,42 @@ pub async fn fetch_image(
 	Ok(image)
 }
 
+// RequestMode::{
+//	 SameOrigin,
+//	 Cors,
+// };
+pub async fn fetch_json(
+	path: &str,
+	mode: RequestMode,
+) -> Result<JsValue, JsValue> {
+	let opts = {
+		let mut temp = RequestInit::new();
+		temp.method("GET");
+		temp.mode(mode);
+		temp
+	};
+
+	let request = Request::new_with_str_and_init(&path, &opts)?;
+	request.headers().set("Accept", "application/json")?;
+	let window = web_sys::window().unwrap();
+	let response_value =
+		JsFuture::from(window.fetch_with_request(&request)).await?;
+
+	let response: Response = response_value.dyn_into().unwrap();
+	if !response.ok() {
+		return Err(JsValue::from_str("Failed to fetch json"));
+	}
+
+	let json = JsFuture::from(response.json()?).await?;
+
+	Ok(json)
+}
+
 impl Resources {
 	pub fn new(gl: Rc<WebGl2RenderingContext>) -> Self {
 		Self {
 			gl,
+			cameras: HashMap::new(),
 			strings: HashMap::new(),
 			shaders: HashMap::new(),
 			programs: HashMap::new(),
@@ -414,41 +452,42 @@ impl Resources {
 	}
 	pub async fn load_shaders(
 		&mut self,
-		data: &[ShaderIntermediate],
+		configs: &[ShaderConfig],
 	) -> Result<Vec<Rc<Shader>>, &'static str> {
-		let sources = data
+		let sources = configs
 			.iter()
-			.map(|info| info.uri.as_str())
+			.map(|config| config.path.as_str())
 			.collect::<Vec<_>>();
-		self.load_texts(&sources)
-			.await
-			.map_err(|_| "Error fetching shader source")?;
 
-		let mut shaders = Vec::with_capacity(data.len());
-		for info in data.iter() {
-			let shader_source = self.strings.get(&info.uri).unwrap().clone();
+		let shader_sources = self
+			.load_texts(&sources)
+			.await
+			.map_err(|_e| "Error fetching shader source")?;
+
+		let mut shaders = Vec::with_capacity(configs.len());
+		for (i, config) in configs.iter().enumerate() {
 			shaders.push(Rc::clone(self.new_shader(
-				&info.id,
-				info.shader_type,
-				&shader_source,
+				&config.id,
+				&config.kind,
+				&shader_sources[i],
+				&config.attributes,
+				&config.uniforms,
 			)?));
 		}
 		Ok(shaders)
 	}
 	pub fn load_programs(
 		&mut self,
-		data: &[ProgramIntermediate],
+		configs: &[ProgramConfig],
 	) -> Result<(Vec<Rc<Program>>, Vec<ShaderWarning>), String> {
-		let mut programs = Vec::with_capacity(data.len());
+		let mut programs = Vec::with_capacity(configs.len());
 		let mut warnings = Vec::new();
-		for info in data.iter() {
+		for config in configs.iter() {
 			let (program, mut program_warnings) = self
 				.new_program_from_shader_ids(
-					&info.id,
-					&info.vertex,
-					&info.fragment,
-					&info.attributes,
-					&info.uniforms,
+					&config.id,
+					&config.vertex_id,
+					&config.fragment_id,
 				)?;
 			warnings.append(&mut program_warnings);
 			programs.push(Rc::clone(program));
@@ -457,7 +496,7 @@ impl Resources {
 	}
 	pub fn load_models(
 		&mut self,
-		models: &[ModelIntermediate],
+		models: &[ModelConfig],
 	) -> Result<Vec<Rc<Model>>, &'static str> {
 		let mut ret = Vec::with_capacity(models.len());
 		for model_data in models.iter() {
@@ -550,6 +589,28 @@ impl Resources {
 			ret.push(Rc::clone(model));
 		}
 		Ok(ret)
+	}
+	pub fn load_cameras(
+		&mut self,
+		configs: &[CameraConfig],
+		width: u32,
+		height: u32,
+	) {
+		for config in configs.iter() {
+			self.new_camera(config, width, height);
+		}
+	}
+	pub async fn load_scene(
+		&mut self,
+		config: &SceneConfig,
+	) -> Result<Vec<ShaderWarning>, &'static str> {
+		self.load_shaders(&config.shaders).await?;
+		let warnings = match self.load_programs(&config.programs) {
+			Ok((_, warnings)) => warnings,
+			Err(_e) => return Err("Failed to build shader programs"),
+		};
+		self.load_cameras(&config.cameras, 800, 600);
+		Ok(warnings)
 	}
 }
 

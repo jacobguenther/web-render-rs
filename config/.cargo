@@ -1,0 +1,4 @@
+[build]
+jobs = 4
+incremental = true
+piplined = true

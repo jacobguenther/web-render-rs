@@ -15,6 +15,7 @@ use crate::model::mesh::Mesh;
 use super::{
 	vertex::Vertex,
 	MeshGenerator,
+	MeshGeneratorT,
 	MeshMode,
 };
 
@@ -55,5 +56,5 @@ pub fn generate_cube(gl: &WebGl2RenderingContext) -> Rc<Mesh> {
 		]);
 	}
 
-	generator.generate_mesh(gl, MeshMode::IndexedTriangles)
+	generator.generate_rc_mesh(gl, MeshMode::IndexedTriangles)
 }

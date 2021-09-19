@@ -8,11 +8,14 @@
 pub mod cube;
 pub mod face;
 // pub mod icosphere;
+pub mod superellipse;
+pub mod supershape_2d;
 pub mod terrain;
 pub mod uv_sphere;
 pub mod vertex;
 
 use std::{
+	cell::RefCell,
 	mem,
 	rc::Rc,
 };
@@ -38,11 +41,41 @@ use crate::model::{
 use face::Face;
 use vertex::Vertex;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum MeshMode {
 	Points,
+	TriangleFan,
 	Triangles,
 	IndexedTriangles,
+}
+
+pub trait MeshGeneratorT {
+	fn generate_mesh(
+		&mut self,
+		gl: &WebGl2RenderingContext,
+		mode: MeshMode,
+	) -> Mesh;
+	fn generate_rc_mesh(
+		&mut self,
+		gl: &WebGl2RenderingContext,
+		mode: MeshMode,
+	) -> Rc<Mesh> {
+		Rc::new(self.generate_mesh(gl, mode))
+	}
+	fn generate_refcell_mesh(
+		&mut self,
+		gl: &WebGl2RenderingContext,
+		mode: MeshMode,
+	) -> RefCell<Mesh> {
+		RefCell::new(self.generate_mesh(gl, mode))
+	}
+	fn generate_rc_refcell_mesh(
+		&mut self,
+		gl: &WebGl2RenderingContext,
+		mode: MeshMode,
+	) -> Rc<RefCell<Mesh>> {
+		Rc::new(self.generate_refcell_mesh(gl, mode))
+	}
 }
 #[derive(Debug)]
 pub struct MeshGenerator {
@@ -60,6 +93,102 @@ impl Default for MeshGenerator {
 			vertex_face_adjacency_list: None,
 			faces_hint: default_capacity,
 		}
+	}
+}
+impl MeshGeneratorT for MeshGenerator {
+	fn generate_mesh(
+		&mut self,
+		gl: &WebGl2RenderingContext,
+		mode: MeshMode,
+	) -> Mesh {
+		let (buffers, index_buffer_view, attribute_buffer_views, mode) =
+			match mode {
+				MeshMode::Points => {
+					let (attribute_buffer, attribute_buffer_views) =
+						self.create_attribute_buffer(gl);
+
+					if false {
+						let (index_buffer, index_buffer_view) =
+							self.create_index_buffer(gl);
+
+						(
+							vec![attribute_buffer, index_buffer],
+							Some(index_buffer_view),
+							attribute_buffer_views,
+							WebGl2RenderingContext::POINTS,
+						)
+					} else {
+						(
+							vec![attribute_buffer],
+							None,
+							attribute_buffer_views,
+							WebGl2RenderingContext::POINTS,
+						)
+					}
+				}
+				MeshMode::TriangleFan => {
+					let (attribute_buffer, attribute_buffer_views) =
+						self.create_attribute_buffer(gl);
+					(
+						vec![attribute_buffer],
+						None,
+						attribute_buffer_views,
+						WebGl2RenderingContext::TRIANGLE_FAN,
+					)
+				}
+				MeshMode::Triangles => {
+					let faces = self.create_faces();
+					if self.vertex_face_adjacency_list.is_none() {
+						self.vertex_face_adjacency_list = Some(
+							self.create_vertex_face_adjacency_list(&faces),
+						);
+					}
+					self.create_normals_and_tangents(&faces);
+					let (attribute_buffer, attribute_buffer_views) =
+						self.create_attribute_buffer(gl);
+
+					(
+						vec![attribute_buffer],
+						None,
+						attribute_buffer_views,
+						WebGl2RenderingContext::TRIANGLES,
+					)
+				}
+				MeshMode::IndexedTriangles => {
+					if self.vertices[0].normal.is_none() {
+						let faces = self.create_faces();
+						if self.vertex_face_adjacency_list.is_none() {
+							self.vertex_face_adjacency_list = Some(
+								self.create_vertex_face_adjacency_list(&faces),
+							);
+						}
+						self.create_normals_and_tangents(&faces);
+					}
+
+					let (attribute_buffer, attribute_buffer_views) =
+						self.create_attribute_buffer(gl);
+
+					let (index_buffer, index_buffer_view) =
+						self.create_index_buffer(gl);
+
+					(
+						vec![attribute_buffer, index_buffer],
+						Some(index_buffer_view),
+						attribute_buffer_views,
+						WebGl2RenderingContext::TRIANGLES,
+					)
+				}
+			};
+		let material = Rc::new(Material::default());
+		Mesh::new(
+			gl,
+			&material,
+			&buffers,
+			&index_buffer_view,
+			&attribute_buffer_views,
+			mode,
+		)
+		.unwrap()
 	}
 }
 impl MeshGenerator {
@@ -123,92 +252,6 @@ impl MeshGenerator {
 		&mut self,
 	) -> &mut Option<Vec<Vec<usize>>> {
 		&mut self.vertex_face_adjacency_list
-	}
-	pub fn generate_mesh(
-		&mut self,
-		gl: &WebGl2RenderingContext,
-		mode: MeshMode,
-	) -> Rc<Mesh> {
-		let (buffers, index_buffer_view, attribute_buffer_views, mode) =
-			match mode {
-				MeshMode::Points => {
-					let (attribute_buffer, attribute_buffer_views) =
-						self.create_attribute_buffer(gl);
-
-					if false {
-						let (index_buffer, index_buffer_view) =
-							self.create_index_buffer(gl);
-
-						(
-							vec![attribute_buffer, index_buffer],
-							Some(index_buffer_view),
-							attribute_buffer_views,
-							WebGl2RenderingContext::POINTS,
-						)
-					} else {
-						(
-							vec![attribute_buffer],
-							None,
-							attribute_buffer_views,
-							WebGl2RenderingContext::POINTS,
-						)
-					}
-				}
-				MeshMode::Triangles => {
-					let faces = self.create_faces();
-					if self.vertex_face_adjacency_list.is_none() {
-						self.vertex_face_adjacency_list = Some(
-							self.create_vertex_face_adjacency_list(&faces),
-						);
-					}
-					self.create_normals_and_tangents(&faces);
-					let (attribute_buffer, attribute_buffer_views) =
-						self.create_attribute_buffer(gl);
-
-					(
-						vec![attribute_buffer],
-						None,
-						attribute_buffer_views,
-						WebGl2RenderingContext::TRIANGLES,
-					)
-				}
-				MeshMode::IndexedTriangles => {
-					if self.vertices[0].normal.is_none() {
-						let faces = self.create_faces();
-						if self.vertex_face_adjacency_list.is_none() {
-							self.vertex_face_adjacency_list = Some(
-								self.create_vertex_face_adjacency_list(&faces),
-							);
-						}
-						self.create_normals_and_tangents(&faces);
-					}
-
-					let (attribute_buffer, attribute_buffer_views) =
-						self.create_attribute_buffer(gl);
-
-					let (index_buffer, index_buffer_view) =
-						self.create_index_buffer(gl);
-
-					(
-						vec![attribute_buffer, index_buffer],
-						Some(index_buffer_view),
-						attribute_buffer_views,
-						WebGl2RenderingContext::TRIANGLES,
-					)
-				}
-			};
-		let material = Rc::new(Material::default());
-		Rc::new(
-			Mesh::new(
-				gl,
-				&material,
-				&buffers,
-				&index_buffer_view,
-				&attribute_buffer_views,
-				mode,
-			)
-			.unwrap(),
-		)
 	}
 
 	fn create_faces(&self) -> Vec<Face> {

@@ -4,6 +4,8 @@
 /target
 /pkg
 
+/macros/target
+
 /assets/glTF-Samples
 /assets/height_maps/test.png
 

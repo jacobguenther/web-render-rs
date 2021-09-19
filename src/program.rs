@@ -14,6 +14,10 @@ use web_sys::{
 	WebGlUniformLocation,
 };
 
+use crate::config::scene_config::{
+	AttributeConfig,
+	UniformConfig,
+};
 use crate::shader::Shader;
 use crate::warning::*;
 
@@ -40,14 +44,19 @@ impl Program {
 		gl: &WebGl2RenderingContext,
 		vert: &Shader,
 		frag: &Shader,
-		attribute_names: &[String],
-		uniform_names: &[String],
 	) -> Result<(Self, Vec<ShaderWarning>), String> {
 		let program = Self::link_program(gl, &vert.handle, &frag.handle)?;
+
 		let (attribute_locations, attribute_warnings) =
-			Self::attribute_locations(gl, &program, attribute_names)?;
+			Self::attribute_locations(gl, &program, &vert.attributes)?;
+
+		let uniforms = {
+			let mut temp = vert.uniforms.clone();
+			temp.extend(frag.uniforms.iter().cloned());
+			temp
+		};
 		let (uniform_locations, uniform_warnings) =
-			Self::uniform_locations(gl, &program, uniform_names)?;
+			Self::uniform_locations(gl, &program, &uniforms)?;
 
 		let warnings = attribute_warnings
 			.iter()
@@ -132,26 +141,27 @@ impl Program {
 	fn attribute_locations(
 		gl: &WebGl2RenderingContext,
 		program: &WebGlProgram,
-		attributes: &[String],
+		attributes: &[AttributeConfig],
 	) -> Result<(HashMap<String, u32>, Vec<ShaderWarning>), &'static str> {
 		let mut locations = HashMap::new();
 		let mut warnings = Vec::new();
-		for attribute_name in attributes.iter() {
-			let location = gl.get_attrib_location(program, attribute_name);
+		for attribute in attributes.iter() {
+			let location =
+				gl.get_attrib_location(program, attribute.name.as_str());
 			if location < 0 {
 				warnings.push(ShaderWarning::AttributeNotFound(
-					attribute_name.to_owned(),
+					attribute.name.clone(),
 				));
 				continue;
 			}
-			locations.insert(attribute_name.to_owned(), location as u32);
+			locations.insert(attribute.name.clone(), location as u32);
 		}
 		Ok((locations, warnings))
 	}
 	fn uniform_locations(
 		gl: &WebGl2RenderingContext,
 		program: &WebGlProgram,
-		uniforms: &[String],
+		uniforms: &[UniformConfig],
 	) -> Result<
 		(HashMap<String, WebGlUniformLocation>, Vec<ShaderWarning>),
 		&'static str,
@@ -159,18 +169,18 @@ impl Program {
 		let mut locations = HashMap::new();
 		let mut warnings = Vec::new();
 		locations.reserve(uniforms.len());
-		for uniform_name in uniforms.iter() {
-			let location = match gl.get_uniform_location(program, uniform_name)
-			{
-				Some(l) => l,
-				None => {
-					warnings.push(ShaderWarning::UniformNotFound(
-						uniform_name.to_owned(),
-					));
-					continue;
-				}
-			};
-			locations.insert(uniform_name.to_owned(), location);
+		for uniform in uniforms.iter() {
+			let location =
+				match gl.get_uniform_location(program, uniform.name.as_str()) {
+					Some(location) => location,
+					None => {
+						warnings.push(ShaderWarning::UniformNotFound(
+							uniform.name.clone(),
+						));
+						continue;
+					}
+				};
+			locations.insert(uniform.name.clone(), location);
 		}
 		Ok((locations, warnings))
 	}

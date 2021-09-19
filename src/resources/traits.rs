@@ -5,15 +5,16 @@
 //
 // Description:
 
-use web_sys::{
-	Document,
-	HtmlImageElement,
-};
+use web_sys::HtmlImageElement;
 
 use crate::{
-	config::{
-		BufferViewIntermediate,
-		MaterialIntermediate,
+	camera::Camera,
+	config::scene_config::{
+		AttributeConfig,
+		BufferViewConfig,
+		CameraConfig,
+		MaterialConfig,
+		UniformConfig,
 	},
 	model::{
 		buffer::Buffer,
@@ -35,6 +36,7 @@ use crate::{
 use std::rc::Rc;
 
 pub trait AddResourceT {
+	fn add_camera(&mut self, id: &str, camera: &Camera) -> Option<&Rc<Camera>>;
 	fn add_string(&mut self, id: &str, string: &str) -> Option<&Rc<String>>;
 	fn add_shader(&mut self, id: &str, shader: &Shader) -> Option<&Rc<Shader>>;
 	fn add_program(
@@ -60,28 +62,32 @@ pub trait AddResourceT {
 	fn add_model(&mut self, id: &str, model: &Model) -> Option<&Rc<Model>>;
 }
 pub trait NewResourceT {
+	fn new_camera(
+		&mut self,
+		config: &CameraConfig,
+		width: u32,
+		height: u32,
+	) -> Option<&Rc<Camera>>;
 	fn new_string(&mut self, id: &str, string: &str) -> Option<&Rc<String>>;
 	fn new_shader(
 		&mut self,
 		id: &str,
-		shader_type: u32,
+		shader_type: &str,
 		shader_source: &str,
+		attributes: &[AttributeConfig],
+		uniforms: &[UniformConfig],
 	) -> Result<&Rc<Shader>, &'static str>;
 	fn new_program(
 		&mut self,
 		id: &str,
 		vertex: &Shader,
 		fragment: &Shader,
-		attribute_names: &[String],
-		uniform_names: &[String],
 	) -> Result<(&Rc<Program>, Vec<ShaderWarning>), String>;
 	fn new_program_from_shader_ids(
 		&mut self,
 		id: &str,
 		vertex_id: &str,
 		fragment_id: &str,
-		attribute_names: &[String],
-		uniform_names: &[String],
 	) -> Result<(&Rc<Program>, Vec<ShaderWarning>), String>;
 
 	fn new_texture(
@@ -93,7 +99,7 @@ pub trait NewResourceT {
 	) -> Result<&Rc<Texture>, &'static str>;
 	fn new_material(
 		&mut self,
-		material: &MaterialIntermediate,
+		material: &MaterialConfig,
 		textures: &[Rc<Texture>],
 	) -> Result<(u32, &Rc<Material>), &'static str>;
 
@@ -106,8 +112,8 @@ pub trait NewResourceT {
 		&mut self,
 		material: &Rc<Material>,
 		buffers: &[Rc<Buffer>],
-		index_view: &Option<BufferViewIntermediate>,
-		buffer_views: &[BufferViewIntermediate],
+		index_view: &Option<BufferViewConfig>,
+		buffer_views: &[BufferViewConfig],
 		mode: u32,
 	) -> Result<(u32, &Rc<Mesh>), &'static str>;
 	fn new_model(
@@ -117,16 +123,6 @@ pub trait NewResourceT {
 	) -> Result<&Rc<Model>, &'static str>;
 }
 pub trait LoadResourceT {
-	// fn fetch_file();
-	// fn batch_fetch_files();
-
-	fn fetch_image(
-		document: &Document,
-		id: &str,
-		uri: &str,
-		parent_id: &str,
-	) -> Result<HtmlImageElement, &'static str>;
-
 	// fn load_config();
 	// fn load_model();
 	// fn load_mesh();

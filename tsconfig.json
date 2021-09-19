@@ -23,8 +23,8 @@
 		// linter checks
 		"noFallthroughCasesInSwitch": true,
 		"noImplicitReturns": true,
-		"noPropertyAccessFromIndexSignature": true,
-		"noUncheckedIndexedAccess":true,
+		// "noPropertyAccessFromIndexSignature": true,
+		// "noUncheckedIndexedAccess": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 
@@ -32,5 +32,6 @@
 	},
 	"files": [
 		"ts/main.ts",
+		"ts/load_model.ts"
 	]
 }

@@ -67,6 +67,8 @@ features = [
 
 	'MouseEvent',
 	'KeyboardEvent',
+	'InputEvent',
+	'HtmlInputElement',
 
 	'WebGl2RenderingContext',
 	'WebGlBuffer',
